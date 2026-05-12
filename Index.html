@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HoloDesk</title>
+  <style>
+    :root{
+      --bg1:#050816;
+      --bg2:#09122b;
+      --panel:rgba(9,16,35,.55);
+      --panel2:rgba(12,22,48,.75);
+      --line:rgba(120,220,255,.22);
+      --text:#eaf4ff;
+      --muted:#9ab4d6;
+      --cyan:#54d7ff;
+      --purple:#9f7bff;
+      --green:#45e29d;
+      --red:#ff6b88;
+      --shadow:0 20px 55px rgba(0,0,0,.35);
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%;margin:0;overflow:hidden;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;color:var(--text)}
+    body{
+      background:
+        radial-gradient(circle at 20% 20%, rgba(159,123,255,.18), transparent 26%),
+        radial-gradient(circle at 80% 15%, rgba(84,215,255,.16), transparent 24%),
+        radial-gradient(circle at 50% 85%, rgba(69,226,157,.10), transparent 28%),
+        linear-gradient(135deg,var(--bg1),var(--bg2));
+    }
+    .grid-bg{
+      position:fixed;inset:0;pointer-events:none;opacity:.22;
+      background-image:
+        linear-gradient(rgba(120,220,255,.12) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(120,220,255,.12) 1px, transparent 1px);
+      background-size:48px 48px;
+      mask-image: radial-gradient(circle at center, black 35%, transparent 92%);
+    }
+    .scanline{
+      position:fixed;left:0;right:0;top:-20%;
+      height:22%;
+      background:linear-gradient(to bottom, transparent, rgba(84,215,255,.08), transparent);
+      filter:blur(1px);
+      animation:scan 7s linear infinite;
+      pointer-events:none;
+    }
+    @keyframes scan{
+      0%{transform:translateY(0)}
+      100%{transform:translateY(520%)}
+    }
+    .desktop{
+      position:relative;
+      width:100%;height:100%;
+      padding:18px 18px 68px;
+    }
+    .topbar{
+      display:flex;align-items:center;justify-content:space-between;
+      gap:12px;margin-bottom:14px;
+    }
+    .brand{
+      display:flex;align-items:center;gap:12px;
+      padding:10px 14px;border-radius:999px;
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.09);
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(18px);
+    }
+    .orb{
+      width:14px;height:14px;border-radius:50%;
+      background:radial-gradient(circle, #fff, var(--cyan) 35%, rgba(84,215,255,.2) 70%);
+      box-shadow:0 0 18px var(--cyan);
+      animation:pulse 2.5s ease-in-out infinite;
+    }
+    @keyframes pulse{50%{transform:scale(1.25)}}
+    .brand b{letter-spacing:.6px}
+    .status{
+      display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;
+      color:var(--muted);font-size:.92rem;
+    }
+    .chip{
+      padding:8px 12px;border-radius:999px;
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.08);
+      backdrop-filter:blur(16px);
+    }
+
+    .icons{
+      display:grid;
+      grid-template-columns:repeat(auto-fit, minmax(92px, 1fr));
+      gap:10px;
+      width:min(720px, 100%);
+      margin-top:10px;
+    }
+    .icon{
+      aspect-ratio:1/1;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      gap:7px;
+      border-radius:16px;
+      background:rgba(255,255,255,.045);
+      border:1px solid rgba(255,255,255,.08);
+      box-shadow:var(--shadow);
+      cursor:pointer;
+      transition:.2s transform,.2s background,.2s border-color;
+      user-select:none;
+      backdrop-filter:blur(18px);
+    }
+    .icon:hover{transform:translateY(-3px);background:rgba(255,255,255,.08);border-color:rgba(84,215,255,.28)}
+    .icon .emoji{font-size:1.5rem}
+    .icon .label{font-size:.82rem;color:#dbe8ff;text-align:center;line-height:1.1}
+
+    .window{
+      position:absolute;
+      width:360px;
+      min-height:220px;
+      border-radius:var(--radius);
+      background:linear-gradient(180deg, rgba(16,26,52,.78), rgba(7,12,28,.78));
+      border:1px solid var(--line);
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(20px);
+      overflow:hidden;
+      display:none;
+    }
+    .window.active{display:block}
+    .titlebar{
+      height:42px;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:0 10px 0 12px;
+      background:linear-gradient(90deg, rgba(84,215,255,.08), rgba(159,123,255,.08));
+      border-bottom:1px solid rgba(255,255,255,.08);
+      cursor:move;
+      user-select:none;
+    }
+    .titlebar strong{font-size:.92rem;letter-spacing:.2px}
+    .controls{display:flex;gap:7px}
+    .dot{
+      width:12px;height:12px;border-radius:50%;border:0;cursor:pointer;
+      box-shadow:0 0 12px rgba(255,255,255,.15);
+    }
+    .dot.min{background:var(--green)}
+    .dot.close{background:var(--red)}
+    .content{
+      padding:14px;
+      color:var(--text);
+      font-size:.95rem;
+    }
+    .muted{color:var(--muted)}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .row > *{flex:1}
+    input,textarea,select,button{
+      font:inherit;
+    }
+    input,textarea,select{
+      width:100%;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(8,14,30,.85);
+      color:var(--text);
+      padding:11px 12px;
+      outline:none;
+    }
+    textarea{min-height:110px;resize:vertical}
+    .btn{
+      border:0;
+      border-radius:14px;
+      padding:11px 14px;
+      color:#fff;
+      cursor:pointer;
+      background:linear-gradient(135deg,var(--cyan),var(--purple));
+      box-shadow:0 12px 26px rgba(84,215,255,.16);
+      transition:.18s transform,.18s opacity;
+    }
+    .btn:hover{transform:translateY(-1px);opacity:.95}
+    .btn.alt{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);box-shadow:none}
+    .btn.green{background:linear-gradient(135deg,#45e29d,#18b6a4)}
+    .btn.red{background:linear-gradient(135deg,#ff6b88,#ff8a3d)}
+    .list{
+      display:grid;gap:8px;margin-top:10px;
+      max-height:230px;overflow:auto;padding-right:2px;
+    }
+    .item{
+      padding:10px 12px;border-radius:14px;
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.08);
+      display:flex;justify-content:space-between;gap:8px;align-items:center;
+    }
+    .item small{display:block;color:var(--muted);margin-top:3px}
+    .bar{
+      height:10px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.08);margin-top:10px;
+    }
+    .bar > div{
+      height:100%;
+      width:0%;
+      background:linear-gradient(90deg,var(--cyan),var(--purple),var(--green));
+      transition:width .3s ease;
+    }
+    .clock{
+      font-size:2.5rem;font-weight:800;letter-spacing:2px;text-align:center;
+      margin:6px 0 10px;
+    }
+    .taskbar{
+      position:fixed;left:14px;right:14px;bottom:12px;
+      height:54px;
+      border-radius:18px;
+      background:rgba(8,12,24,.66);
+      border:1px solid rgba(255,255,255,.10);
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(20px);
+      display:flex;align-items:center;justify-content:space-between;
+      padding:0 12px;
+      z-index:9999;
+    }
+    .dock{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .dockbtn{
+      height:38px;min-width:38px;padding:0 12px;border-radius:12px;
+      background:rgba(255,255,255,.07);
+      border:1px solid rgba(255,255,255,.08);
+      color:var(--text);
+      cursor:pointer;
+    }
+    .dockbtn:hover{background:rgba(255,255,255,.11)}
+    .taskinfo{display:flex;gap:10px;align-items:center;color:var(--muted);font-size:.9rem}
+    .notif{
+      position:fixed;right:18px;top:18px;
+      width:min(320px, calc(100% - 36px));
+      padding:14px 16px;
+      border-radius:18px;
+      background:rgba(8,12,24,.88);
+      border:1px solid rgba(84,215,255,.22);
+      box-shadow:var(--shadow);
+      backdrop-filter:blur(18px);
+      transform:translateY(-130%);
+      opacity:0;
+      transition:.35s ease;
+      z-index:10000;
+    }
+    .notif.show{transform:translateY(0);opacity:1}
+    .notif b{display:block;margin-bottom:4px}
+    .mini-grid{
+      display:grid;grid-template-columns:repeat(2,1fr);gap:10px;
+    }
+    .cardbox{
+      padding:12px;border-radius:16px;background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .app-grid{
+      display:grid;
+      grid-template-columns:repeat(3,1fr);
+      gap:10px;
+      margin-top:8px;
+    }
+    .app{
+      padding:12px 10px;border-radius:16px;text-align:center;
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.08);
+      cursor:pointer;
+    }
+    .app:hover{border-color:rgba(84,215,255,.24)}
+    .kbd{
+      display:inline-block;
+      padding:2px 8px;border-radius:8px;
+      background:rgba(255,255,255,.08);
+      border:1px solid rgba(255,255,255,.10);
+      color:#dbe9ff;font-size:.82rem;
+    }
+
+    @media (max-width: 860px){
+      .window{width:min(92vw, 420px)}
+      .icons{grid-template-columns:repeat(2, minmax(92px, 1fr))}
+    }
+    @media (max-width: 520px){
+      .desktop{padding:12px 12px 68px}
+      .icons{grid-template-columns:repeat(2, 1fr)}
+      .taskbar{left:8px;right:8px}
+      .clock{font-size:2rem}
+      .window{width:92vw}
+    }
+  </style>
+</head>
+<body>
+  <div class="grid-bg"></div>
+  <div class="scanline"></div>
+
+  <div class="notif" id="notif">
+    <b id="notifTitle">HoloDesk</b>
+    <div id="notifText" class="muted"></div>
+  </div>
+
+  <div class="desktop" id="desktop">
+    <div class="topbar">
+      <div class="brand">
+        <div class="orb"></div>
+        <div>
+          <b>HoloDesk</b>
+          <div class="muted" style="font-size:.84rem">Holographic browser OS</div>
+        </div>
+      </div>
+      <div class="status">
+        <div class="chip" id="dateChip">---</div>
+        <div class="chip" id="clockChip">--:--:--</div>
+        <div class="chip">Battery 97%</div>
+        <div class="chip">Signal Strong</div>
+      </div>
+    </div>
+
+    <div class="icons">
+      <div class="icon" onclick="openWin('launcher')"><div class="emoji">🧭</div><div class="label">Launcher</div></div>
+      <div class="icon" onclick="openWin('notes')"><div class="emoji">📝</div><div class="label">Notes</div></div>
+      <div class="icon" onclick="openWin('files')"><div class="emoji">📁</div><div class="label">Files</div></div>
+      <div class="icon" onclick="openWin('ai')"><div class="emoji">🤖</div><div class="label">AI Panel</div></div>
+      <div class="icon" onclick="openWin('weather')"><div class="emoji">☁️</div><div class="label">Weather</div></div>
+      <div class="icon" onclick="openWin('music')"><div class="emoji">🎵</div><div class="label">Music</div></div>
+    </div>
+
+    <div class="window" id="win-launcher" style="left:72px;top:110px;z-index:5">
+      <div class="titlebar" onmousedown="dragStart(event,this.parentElement)">
+        <strong>App Launcher</strong>
+        <div class="controls">
+          <button class="dot min" onclick="minimizeWin(event,'launcher')" title="Minimize"></button>
+          <button class="dot close" onclick="closeWin(event,'launcher')" title="Close"></button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="muted">Quick access to HoloDesk modules.</div>
+        <div class="app-grid">
+          <div class="app" onclick="openWin('notes')">Notes</div>
+          <div class="app" onclick="openWin('files')">Files</div>
+          <div class="app" onclick="openWin('ai')">AI</div>
+          <div class="app" onclick="openWin('weather')">Weather</div>
+          <div class="app" onclick="openWin('music')">Music</div>
+          <div class="app" onclick="showToast('System scan complete')">Scan</div>
+        </div>
+        <div style="height:12px"></div>
+        <div class="cardbox">
+          <div><b>Hotkeys</b></div>
+          <div class="muted" style="margin-top:6px">
+            <span class="kbd">Alt</span>+<span class="kbd">1</span> Notes ·
+            <span class="kbd">Alt</span>+<span class="kbd">2</span> Files ·
+            <span class="kbd">Alt</span>+<span class="kbd">3</span> AI
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="window" id="win-notes" style="left:120px;top:170px;z-index:6">
+      <div class="titlebar" onmousedown="dragStart(event,this.parentElement)">
+        <strong>Notes</strong>
+        <div class="controls">
+          <button class="dot min" onclick="minimizeWin(event,'notes')"></button>
+          <button class="dot close" onclick="closeWin(event,'notes')"></button>
+        </div>
+      </div>
+      <div class="content">
+        <input id="noteTitle" placeholder="Note title" />
+        <div style="height:10px"></div>
+        <textarea id="noteText" placeholder="Write something..."></textarea>
+        <div style="height:10px"></div>
+        <div class="row">
+          <button class="btn" onclick="saveNote()">Save Note</button>
+          <button class="btn alt" onclick="clearNotes()">Clear All</button>
+        </div>
+        <div class="list" id="notesList"></div>
+      </div>
+    </div>
+
+    <div class="window" id="win-files" style="left:220px;top:130px;z-index:7">
+      <div class="titlebar" onmousedown="dragStart(event,this.parentElement)">
+        <strong>File Explorer</strong>
+        <div class="controls">
+          <button class="dot min" onclick="minimizeWin(event,'files')"></button>
+          <button class="dot close" onclick="closeWin(event,'files')"></button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="mini-grid">
+          <div class="cardbox"><b>Projects</b><div class="muted">12 folders</div></div>
+          <div class="cardbox"><b>Downloads</b><div class="muted">24 files</div></div>
+          <div class="cardbox"><b>Assets</b><div class="muted">9 images</div></div>
+          <div class="cardbox"><b>Archive</b><div class="muted">4 backups</div></div>
+        </div>
+        <div style="height:12px"></div>
+        <div class="item">
+          <div>HoloDesk_Master.html<small>Browser app source</small></div>
+          <span class="kbd">2.4 MB</span>
+        </div>
+        <div class="item">
+          <div>AI_Logs.txt<small>Recent system notes</small></div>
+          <span class="kbd">384 KB</span>
+        </div>
+        <div class="item">
+          <div>Wallpaper_Nova.png<small>Desktop background</small></div>
+          <span class="kbd">8.1 MB</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="window" id="win-ai" style="left:340px;top:160px;z-index:8">
+      <div class="titlebar" onmousedown="dragStart(event,this.parentElement)">
+        <strong>AI Terminal</strong>
+        <div class="controls">
+          <button class="dot min" onclick="minimizeWin(event,'ai')"></button>
+          <button class="dot close" onclick="closeWin(event,'ai')"></button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="muted">Ask Holo AI anything.</div>
+        <input id="aiInput" placeholder="Type a command..." onkeydown="if(event.key==='Enter')askAI()" />
+        <div style="height:10px"></div>
+        <div class="row">
+          <button class="btn green" onclick="askAI()">Run</button>
+          <button class="btn alt" onclick="fillAI('Open focus mode')">Focus</button>
+          <button class="btn alt" onclick="fillAI('System status')">Status</button>
+        </div>
+        <div class="list" id="aiLog"></div>
+      </div>
+    </div>
+
+    <div class="window" id="win-weather" style="left:520px;top:110px;z-index:9">
+      <div class="titlebar" onmousedown="dragStart(event,this.parentElement)">
+        <strong>Weather Station</strong>
+        <div class="controls">
+          <button class="dot min" onclick="minimizeWin(event,'weather')"></button>
+          <button class="dot close" onclick="closeWin(event,'weather')"></button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="clock" id="weatherTemp">24°C</div>
+        <div class="muted" style="text-align:center" id="weatherMood">Clear skies over Neo City</div>
+        <div style="height:12px"></div>
+        <div class="mini-grid">
+          <div class="cardbox"><b>Humidity</b><div class="muted">41%</div></div>
+          <div class="cardbox"><b>Wind</b><div class="muted">9 km/h</div></div>
+          <div class="cardbox"><b>UV</b><div class="muted">Moderate</div></div>
+          <div class="cardbox"><b>Feels Like</b><div class="muted">26°C</div></div>
+        </div>
+        <div style="height:12px"></div>
+        <button class="btn" onclick="randomWeather()">Refresh Forecast</button>
+      </div>
+    </div>
+
+    <div class="window" id="win-music" style="left:420px;top:250px;z-index:10">
+      <div class="titlebar" onmousedown="dragStart(event,this.parentElement)">
+        <strong>Music Player</strong>
+        <div class="controls">
+          <button class="dot min" onclick="minimizeWin(event,'music')"></button>
+          <button class="dot close" onclick="closeWin(event,'music')"></button>
+        </div>
+      </div>
+      <div class="content">
+        <div class="cardbox" style="text-align:center">
+          <div style="font-size:2.6rem">🎧</div>
+          <b id="songTitle">Neon Drift</b>
+          <div class="muted" id="songArtist">HoloDesk Lo-fi</div>
+          <div class="bar"><div id="musicBar"></div></div>
+        </div>
+        <div style="height:12px"></div>
+        <div class="row">
+          <button class="btn green" onclick="playPause()">Play / Pause</button>
+          <button class="btn alt" onclick="nextSong()">Next</button>
+        </div>
+        <div class="muted" style="margin-top:10px">Synthetic visualizer only — no external audio needed.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="taskbar">
+    <div class="dock">
+      <button class="dockbtn" onclick="openWin('launcher')">🧭</button>
+      <button class="dockbtn" onclick="openWin('notes')">📝 Notes</button>
+      <button class="dockbtn" onclick="openWin('files')">📁 Files</button>
+      <button class="dockbtn" onclick="openWin('ai')">🤖 AI</button>
+      <button class="dockbtn" onclick="openWin('weather')">☁️ Weather</button>
+      <button class="dockbtn" onclick="openWin('music')">🎵 Music</button>
+    </div>
+    <div class="taskinfo">
+      <span id="systemState">System ready</span>
+      <span class="kbd">HoloDesk OS</span>
+    </div>
+  </div>
+
+  <script>
+    const state = {
+      notes: JSON.parse(localStorage.getItem('holo_notes') || '[]'),
+      z: 20,
+      musicPlaying: false,
+      songIndex: 0,
+      songs: [
+        {title:'Neon Drift', artist:'HoloDesk Lo-fi'},
+        {title:'Solar Bloom', artist:'Ambient Circuit'},
+        {title:'Midnight Glide', artist:'Future Sleep'}
+      ]
+    };
+
+    const winOrder = ['launcher','notes','files','ai','weather','music'];
+
+    function showToast(title, text='') {
+      const n = document.getElementById('notif');
+      document.getElementById('notifTitle').textContent = title;
+      document.getElementById('notifText').textContent = text || 'Command executed successfully.';
+      n.classList.add('show');
+      clearTimeout(window.__toast);
+      window.__toast = setTimeout(() => n.classList.remove('show'), 2300);
+    }
+
+    function updateClock() {
+      const now = new Date();
+      const time = now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+      const date = now.toLocaleDateString([], {weekday:'short', month:'short', day:'numeric'});
+      document.getElementById('clockChip').textContent = time;
+      document.getElementById('dateChip').textContent = date;
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    function openWin(name) {
+      const w = document.getElementById('win-' + name);
+      w.classList.add('active');
+      bringToFront(w);
+      if(name === 'notes') renderNotes();
+      if(name === 'ai') renderAILog();
+      if(name === 'music') syncMusicUI();
+      if(name === 'weather') randomWeather(false);
+      document.getElementById('systemState').textContent = name.toUpperCase() + ' opened';
+      showToast('Opened ' + name.charAt(0).toU
